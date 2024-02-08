@@ -29,12 +29,20 @@ else
 {
     [Inject]
     public IProductService ProductService { get; set; }
+    
+    [Inject]
+    public IShoppingCartService ShoppingCartService { get; set; }
 
     public IEnumerable<ProductDto> ProductDtos { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         ProductDtos = await ProductService.GetItems();
+        
+        var shoppingCartItems = await ShoppingCartService.GetItems(HardCoded.UserId);
+        var totalQty = shoppingCartItems.Sum(i => i.Qty);
+        
+        ShoppingCartService.RaiseEventOnShoppingCartChanged(totalQty);
     }
     
     protected IOrderedEnumerable<IGrouping<int, ProductDto>> GetGroupedProductsByCategory()
