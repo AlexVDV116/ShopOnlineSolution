@@ -1,5 +1,5 @@
 @page "/ShoppingCart"
-@inherits ShoppingCartBase
+@using ShopOnline.Web.Services.Contracts
 
 @if (ShoppingCartItems == null && ErrorMessage == null)
 {
@@ -7,37 +7,89 @@
 }
 else if (ErrorMessage != null)
 {
-    <DisplayError ErrorMessage ="@ErrorMessage"></DisplayError>
+    <DisplayError ErrorMessage="@ErrorMessage"></DisplayError>
 }
 else
 {
     <h3 class="mb-5">Shopping Cart</h3>
-    <div class="row mb-5">
-        <div class="col-md-9">
-            @foreach (var item in ShoppingCartItems)
-            {
-                <div class="row mb-4">
-                    <div class="col-md-4">
-                        <img src="@item.ProductImageURL" width="300" class="img-thumbnail" alt="Product Image">
+    @if (ShoppingCartItems.Count() > 0)
+    {
+        <div class="row mb-5">
+            <div class="col-md-9">
+                @foreach (var item in ShoppingCartItems)
+                {
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <img src="@item.ProductImageURL" width="300" class="img-thumbnail" alt="Product Image">
+                        </div>
+                        <div class="col-md-8">
+                            <h5>@item.ProductName</h5>
+                            <div class="mb-4">@item.ProductDescription</div>
+                            <span>
+                                Price: <b>@item.Price.ToString("C")</b>
+                            </span>
+                            <div>
+                                <button @onclick="(() => DeleteCartItem_Click(item.Id))" class="btn btn-danger sm"><i class="fa fa-trash"></i></button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-8">
-                        <h5>@item.ProductName</h5>
-                        <div class="mb-4">@item.ProductDescription</div>
-                        <span>
-                            Price: <b>@item.Price.ToString("C")</b>
-                        </span>
-                    </div>
+                }
+            </div>
+            <div class="col-md-3">
+                <h5>Cart Summary</h5>
+                <div class="mt-2">
+                    <div>Total - </div>
+                    <a href="#" class="btn btn-success">
+                        <span class="oi oi-credit-card"></span>&nbsp; Proceed to Checkout
+                    </a>
                 </div>
-            }
-        </div>
-        <div class="col-md-3">
-            <h5>Cart Summary</h5>
-            <div class="mt-2">
-                <div>Total - </div>
-                <a href="#" class="btn btn-success">
-                    <span class="oi oi-credit-card"></span>&nbsp; Proceed to Checkout
-                </a>
             </div>
         </div>
-    </div>
+    }
+    else
+    {
+        <div class="alert alert-info" role="alert">
+            Your shopping cart is empty.
+        </div>
+    }
+}
+
+@code
+{
+    [Inject] public IShoppingCartService ShoppingCartService { get; set; }
+
+    public List<CartItemDto> ShoppingCartItems { get; set; }
+
+    public string ErrorMessage { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            ShoppingCartItems = await ShoppingCartService.GetItems(HardCoded.UserId);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+
+    protected async Task DeleteCartItem_Click(int id)
+    {
+        var cartItemDto = await ShoppingCartService.DeleteItem(id);
+
+        RemoveCartItem(id);
+    }
+
+    private CartItemDto GetCartItem(int id)
+    {
+        return ShoppingCartItems.FirstOrDefault(i => i.Id == id);
+    }
+
+    private void RemoveCartItem(int id)
+    {
+        var cartItemDto = GetCartItem(id);
+
+        ShoppingCartItems.Remove(cartItemDto);
+    }
 }

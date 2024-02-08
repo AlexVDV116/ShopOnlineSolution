@@ -1,7 +1,7 @@
 @page "/"
-@inherits ProductsBase
+@using ShopOnline.Web.Services.Contracts
 
-@if (Products == null)
+@if (ProductDtos == null)
 {
     <DisplaySpinner />
 }
@@ -9,7 +9,7 @@ else
 {
     <h3 class="mb-5">Products</h3>
 
-    var productCount = Products.Count();
+    var productCount = ProductDtos.Count();
 
     @if (productCount > 0)
     {
@@ -22,5 +22,32 @@ else
             </div>
             <hr class="mb-3"/>
         }
+    }
+}
+
+@code
+{
+    [Inject]
+    public IProductService ProductService { get; set; }
+
+    public IEnumerable<ProductDto> ProductDtos { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ProductDtos = await ProductService.GetItems();
+    }
+    
+    protected IOrderedEnumerable<IGrouping<int, ProductDto>> GetGroupedProductsByCategory()
+    {
+        return from product in ProductDtos
+            group product by product.CategoryId
+            into prodByCatGroup
+            orderby prodByCatGroup.Key
+            select prodByCatGroup;
+    }
+
+    protected string GetCategoryName(IGrouping<int, ProductDto> groupedProductDtos)
+    {
+        return groupedProductDtos.FirstOrDefault(pg => pg.CategoryId == groupedProductDtos.Key).CategoryName;
     }
 }

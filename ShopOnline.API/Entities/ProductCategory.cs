@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace ShopOnline.API.Entities;
 
 public class ProductCategory
