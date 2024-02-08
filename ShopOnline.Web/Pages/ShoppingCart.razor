@@ -27,9 +27,15 @@ else
                             <div class="mb-4">@item.ProductDescription</div>
                             <span>
                                 Price: <b>@item.Price.ToString("C")</b>
+                                <input @oninput="() => UpdateQty_Input(item.Id)" type="number" @bind=@item.Qty/>
+                                <button data-itemId="@item.Id" 
+                                    @onclick="() => UpdateQtyCartItem_Click(item.Id, item.Qty)" 
+                                        class="btn btn-info btn-sm update-qty">Update Qty</button>
                             </span>
                             <div>
-                                <button @onclick="(() => DeleteCartItem_Click(item.Id))" class="btn btn-danger sm"><i class="fa fa-trash"></i></button>
+                                <button @onclick="() => DeleteCartItem_Click(item.Id)" class="btn btn-danger sm">
+                                    <i class="fa fa-trash"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -38,7 +44,7 @@ else
             <div class="col-md-3">
                 <h5>Cart Summary</h5>
                 <div class="mt-2">
-                    <div>Total - </div>
+                    <div>Total - (@TotalQuantity items)&nbsp;<b>@TotalPrice</b></div>
                     <a href="#" class="btn btn-success">
                         <span class="oi oi-credit-card"></span>&nbsp; Proceed to Checkout
                     </a>
@@ -56,17 +62,25 @@ else
 
 @code
 {
+    [Inject]
+    public IJSRuntime Js { get; set; } 
+    
     [Inject] public IShoppingCartService ShoppingCartService { get; set; }
 
     public List<CartItemDto> ShoppingCartItems { get; set; }
 
     public string ErrorMessage { get; set; } = null!;
+    
+    protected string TotalPrice { get; set; }
+    
+    protected int TotalQuantity { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             ShoppingCartItems = await ShoppingCartService.GetItems(HardCoded.UserId);
+            CalculateCartSummaryTotals();
         }
         catch (Exception ex)
         {
@@ -79,6 +93,72 @@ else
         var cartItemDto = await ShoppingCartService.DeleteItem(id);
 
         RemoveCartItem(id);
+        CalculateCartSummaryTotals();
+    }
+
+    protected async Task UpdateQtyCartItem_Click(int id, int qty)
+    {
+        if (qty > 0)
+        {
+            var updateItemDto = new CartItemQtyUpdateDto()
+            {
+                CartItemId = id,
+                Qty = qty
+            };
+
+            var returnedUpdateItemDto = await ShoppingCartService.UpdateQty(updateItemDto);
+            
+            UpdateItemTotalPrice(returnedUpdateItemDto);
+            CalculateCartSummaryTotals();
+            
+            await MakeUpdateQtyButtonVisible(id, false);
+        }
+        else
+        {
+            var item = ShoppingCartItems.FirstOrDefault(i => i.Id == id);
+
+            if (item != null)
+            {
+                item.Qty = 1;
+                item.TotalPrice = item.Price;
+            }
+        }
+    }
+
+    protected async Task UpdateQty_Input(int id)
+    {
+        await MakeUpdateQtyButtonVisible(id, true);
+    }
+
+    private async Task MakeUpdateQtyButtonVisible(int id, bool visible)
+    {
+        await Js.InvokeVoidAsync("MakeUpdateQtyButtonVisible", id, visible);
+    }
+
+    private void UpdateItemTotalPrice(CartItemDto cartItemDto)
+    {
+        var item = GetCartItem(cartItemDto.Id);
+
+        if (item != null)
+        {
+            item.TotalPrice = cartItemDto.Price * cartItemDto.Qty;
+        }
+    }
+    
+    private void CalculateCartSummaryTotals()
+    {
+        SetTotalPrice();
+        SetTotalQuantity();
+    }
+
+    private void SetTotalPrice()
+    {
+        TotalPrice = ShoppingCartItems.Sum(p => p.TotalPrice).ToString("C");
+    }
+    
+    private void SetTotalQuantity()
+    {
+        TotalQuantity = ShoppingCartItems.Sum(p => p.Qty);
     }
 
     private CartItemDto GetCartItem(int id)
