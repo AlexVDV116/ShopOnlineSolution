@@ -1,5 +1,6 @@
 @page "/ProductDetails/{Id:int}"
-@inherits ProductDetailsBase
+@using ShopOnline.Web.Services.Contracts
+
 
 @if (Product == null && ErrorMessage == null)
 {
@@ -26,13 +27,49 @@ else
             </p>
             <div>
                 <button class="btn btn-success"
-                @onclick ="() => (AddToCart_Click(new CartItemToAddDto{
-                    CartId = HardCoded.CartId,
-                    ProductId = Product.Id,
-                    Qty = 1
-                }))"
-                ><b>Add to Cart</b></button>
+                        @onclick="() => (AddToCart_Click(new CartItemToAddDto { CartId = HardCoded.CartId, ProductId = Product.Id, Qty = 1 }))">
+                    <b>Add to Cart</b>
+                </button>
+            </div>
         </div>
     </div>
-    </div>
+}
+
+@code
+{
+
+    [Parameter] public int Id { get; set; }
+
+    [Inject] public IProductService ProductService { get; set; }
+    [Inject] public IShoppingCartService ShoppingCartService { get; set; }
+    [Inject] public NavigationManager NavigationManager { get; set; }
+    public ProductDto Product { get; set; }
+    public string ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Product = await ProductService.GetItem(Id);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+
+    protected async Task AddToCart_Click(CartItemToAddDto cartItemToAddDto)
+    {
+        try
+        {
+            var cartItemDto = await ShoppingCartService.AddItem(cartItemToAddDto);
+            NavigationManager.NavigateTo("/ShoppingCart");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
 }
