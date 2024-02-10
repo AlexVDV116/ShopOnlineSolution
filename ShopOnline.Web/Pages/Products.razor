@@ -32,17 +32,39 @@ else
     
     [Inject]
     public IShoppingCartService ShoppingCartService { get; set; }
+    
+    [Inject]
+    public IManageProductsLocalStorageService ManageProductsLocalStorageService { get; set; }
+    
+    [Inject]
+    public IManageCartItemsLocalStorageService ManageCartItemsLocalStorageService { get; set; }
 
     public IEnumerable<ProductDto> ProductDtos { get; set; }
+    
+    [Inject]
+    public NavigationManager NavigationManager { get; set; }
+
+    public string ErrorMessage { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        ProductDtos = await ProductService.GetItems();
+
+        try
+        {
+
+            await ClearLocalStorage();
+
+            ProductDtos = await ManageProductsLocalStorageService.GetCollection();
         
-        var shoppingCartItems = await ShoppingCartService.GetItems(HardCoded.UserId);
-        var totalQty = shoppingCartItems.Sum(i => i.Qty);
+            var shoppingCartItems = await ManageCartItemsLocalStorageService.GetCollection();
+            var totalQty = shoppingCartItems.Sum(i => i.Qty);
         
-        ShoppingCartService.RaiseEventOnShoppingCartChanged(totalQty);
+            ShoppingCartService.RaiseEventOnShoppingCartChanged(totalQty);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
     }
     
     protected IOrderedEnumerable<IGrouping<int, ProductDto>> GetGroupedProductsByCategory()
@@ -57,5 +79,11 @@ else
     protected string GetCategoryName(IGrouping<int, ProductDto> groupedProductDtos)
     {
         return groupedProductDtos.FirstOrDefault(pg => pg.CategoryId == groupedProductDtos.Key).CategoryName;
+    }
+
+    private async Task ClearLocalStorage()
+    {
+        await ManageProductsLocalStorageService.RemoveCollection();
+        await ManageCartItemsLocalStorageService.RemoveCollection();
     }
 }
