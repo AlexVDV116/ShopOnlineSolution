@@ -18,7 +18,9 @@ public class ProductRepository : IProductRepository
 
     public async Task<IEnumerable<Product>> GetItems()
     {
-        var products = await _shopOnlineDbContext.Products.ToListAsync();
+        var products = await _shopOnlineDbContext.Products
+            .Include(p => p.ProductCategory)
+            .ToArrayAsync();
 
         return products;
     }
@@ -32,7 +34,10 @@ public class ProductRepository : IProductRepository
 
     public async Task<Product> GetItem(int id)
     {
-        var product = await _shopOnlineDbContext.Products.FindAsync(id);
+        var product = await _shopOnlineDbContext.Products
+            .Include(p => p.ProductCategory)
+            .SingleOrDefaultAsync(p => p.Id == id);
+        
         return product;
     }
 
@@ -45,9 +50,9 @@ public class ProductRepository : IProductRepository
 
     public async Task<IEnumerable<Product>> GetItemsByCategory(int id)
     {
-        var products = await (from product in _shopOnlineDbContext.Products
-            where product.CategoryId == id
-            select product).ToListAsync();
+        var products = await _shopOnlineDbContext.Products
+            .Include(p => p.ProductCategory)
+            .Where(p => p.CategoryId == id).ToListAsync();
         return products;
     }
 }
