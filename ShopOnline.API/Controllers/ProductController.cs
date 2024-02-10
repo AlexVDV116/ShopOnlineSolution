@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using ShopOnline.API.Entities;
 using ShopOnline.API.Extensions;
 using ShopOnline.API.Repositories.Contracts;
 using ShopOnline.Models.Dtos;
@@ -62,6 +63,42 @@ namespace ShopOnline.API.Controllers
                 }
             }
             catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving data from the database");
+            }
+        }
+
+        [HttpGet]
+        [Route(nameof(GetProductCategories))]
+        public async Task<ActionResult<IEnumerable<ProductCategoryDto>>> GetProductCategories()
+        {
+            try
+            {
+                var productCategories = await _productRepository.GetCategories();
+                var productCategoryDtos = productCategories.ConvertToDto();
+                
+                return Ok(productCategories);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving data from the database");
+
+            }
+        }
+
+        [HttpGet]
+        [Route("{categoryId}/GetItemsByCategory")]
+        public async Task<ActionResult<IEnumerable<ProductDto>>> GetItemsByCategory(int categoryId)
+        {
+            try
+            {
+                var products = await _productRepository.GetItemsByCategory(categoryId);
+                var productCategories = await _productRepository.GetCategories();
+                var productDtos = products.ConvertToDto(productCategories);
+
+                return Ok(productDtos);
+            }
+            catch (Exception e)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving data from the database");
             }
